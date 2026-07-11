@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة محتوى كامل إلى Supabase</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h2 {
+            color: #00b4d8;
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        p {
+            color: #607d8b;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #e0e0e0;
+            margin: 20px 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #37474f;
+            font-size: 14px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            height: 80px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #00b4d8;
+            box-shadow: 0 0 5px rgba(0, 180, 216, 0.3);
+        }
+        .file-label {
+            display: block;
+            background-color: #eceff1;
+            color: #37474f;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px dashed #b0bec5;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        #file-input {
+            display: none;
+        }
+        .btn {
+            background-color: #00b4d8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background-color: #0077b6;
+        }
+        .btn:disabled {
+            background-color: #b0bec5;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+            font-weight: bold;
+            color: #546e7a;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .progress-fill {
+            height: 6px;
+            width: 0%;
+            background-color: #4caf50;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>إضافة محتوى كامل للـ سوبابيس</h2>
+    <p>رفع الصورة وجدول البيانات معاً في خطوة واحدة</p>
+    <hr>
+    
+    <form id="upload-form">
+        <!-- خانة العنوان -->
+        <div class="form-group">
+            <label for="title">عنوان البطاقة:</label>
+            <input type="text" id="title" placeholder="أدخل العنوان هنا..." required>
+        </div>
+
+        <!-- خانة الوصف -->
+        <div class="form-group">
+            <label for="desc">الوصف:</label>
+            <textarea id="desc" placeholder="اكتب وصفاً مختصراً هنا..." required></textarea>
+        </div>
+
+        <!-- خانة اختيار الصورة المدمجة -->
+        <div class="form-group">
+            <label>صورة البطاقة:</label>
+            <label for="file-input" class="file-label" id="file-label-text">📂 اختر صورة المحتوى</label>
+            <input type="file" id="file-input" accept="image/*" required>
+        </div>
+
+        <!-- شريط تقدم رفع الصورة -->
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <!-- زر الإرسال النهائي -->
+        <button type="submit" class="btn" id="submit-btn">بدء الرفع والنشر 🚀</button>
+    </form>
+
+    <!-- نص حالة الرفع والعمليات -->
+    <div id="status"></div>
+</div>
+
+<script>
+    // إعدادات الـ Supabase الخاصة بك
+    const SUPABASE_URL = "https://nxbhyybjmmecysbnrstm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_4-YpKSS6qG7AxnQUFg998A_p52L5K4h";
+    const BUCKET_NAME = "avatars";
+
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('file-input');
+    const fileLabelText = document.getElementById('file-label-text');
+    const submitBtn = document.getElementById('submit-btn');
+    const statusText = document.getElementById('status');
+    const progressBar = document.getElementById('progress-bar');
+    const progressFill = document.getElementById('progress-fill');
+
+    let selectedFile = null;
+
+    // تتبع اختيار الملف
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            selectedFile = e.target.files[0];
+            fileLabelText.innerText = `✅ تم اختيار: ${selectedFile.name}`;
+            fileLabelText.style.borderColor = "#4caf50";
+        } else {
+            selectedFile = null;
+            fileLabelText.innerText = `📂 اختر صورة المحتوى`;
+            fileLabelText.style.borderColor = "#b0bec5";
+        }
+    });
+
+    // معالجة إرسال النموذج كامل
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!selectedFile) {
+            alert("الرجاء اختيار صورة أولاً!");
+            return;
+        }
+
+        // قفل الواجهة أثناء المعالجة
+        submitBtn.disabled = true;
+        statusText.innerText = "1/2 جاري رفع الصورة إلى الـ Storage...";
+        statusText.style.color = "#00b4d8";
+        progressBar.style.display = "block";
+        progressFill.style.width = "0%";
+
+        // خطوة 1: رفع الصورة إلى الـ Storage وتوليد الرابط المباشر لها
+        const safeFileName = Date.now() + "_" + selectedFile.name.replace(/\s+/g, '_'); // تم إضافة التوقيت لمنع تداخل الأسماء
+        const storageUrl = `${SUPABASE_URL}/storage/v1/object/${BUCKET_NAME}/${safeFileName}`;
+        
+        // رابط القراءة المباشر (Public URL) الذي سيخزن في قاعدة البيانات
+        const publicImageUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/${safeFileName}`;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", storageUrl, true);
+        xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_KEY}`);
+        xhr.setRequestHeader("apiKey", SUPABASE_KEY);
+        xhr.setRequestHeader("Content-Type", selectedFile.type);
+
+        // تحديث مؤشر الرفع للصورة
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                const percentage = (event.loaded / event.total) * 100;
+                progressFill.style.width = percentage + "%";
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200 || xhr.status === 201) {
+                // إذا نجح رفع الصورة، ننتقل فوراً لرفع البيانات النصية
+                progressBar.style.display = "none";
+                uploadTextData(publicImageUrl);
+            } else {
+                showError(`فشلت خطوة رفع الصورة (كود: ${xhr.status})`);
+            }
+        };
+
+        xhr.onerror = function() {
+            showError("حدث خطأ في الشبكة أثناء رفع الصورة.");
+        };
+
+        xhr.send(selectedFile);
+    });
+
+    // خطوة 2: رفع البيانات النصية ورابط الصورة إلى الـ Database جدول (studio)
+    function uploadTextData(imageUrl) {
+        statusText.innerText = "2/2 جاري حفظ البيانات في قاعدة البيانات...";
+        statusText.style.color = "#00b4d8";
+
+        const titleValue = document.getElementById('title').value;
+        const descValue = document.getElementById('desc').value;
+
+        // رابط الـ API لإدراج صف جديد في جدول studio
+        const dbUrl = `${SUPABASE_URL}/rest/v1/studio`;
+
+        const rowData = {
+            title: titleValue,
+            desc: descValue,
+            img: imageUrl,
+            likes: 0,
+            dislikes: 0,
+            dnls: 0
+        };
+
+        fetch(dbUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'apiKey': SUPABASE_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation' // تطلب من سوبابيس إرجاع البيانات للتأكيد
+            },
+            body: JSON.stringify(rowData)
+        })
+        .then(res => {
+            if (res.ok) {
+                statusText.innerText = "تم رفع الصورة ونشر البيانات في سوبابيس بنجاح! 🎉";
+                statusText.style.color = "#2e7d32";
+                form.reset();
+                fileLabelText.innerText = `📂 اختر صورة المحتوى`;
+                fileLabelText.style.borderColor = "#b0bec5";
+                selectedFile = null;
+            } else {
+                throw new Error(`كود الخطأ: ${res.status}`);
+            }
+        })
+        .catch(err => {
+            showError(`فشل حفظ البيانات النصية. تأكد من وجود جدول باسم studio وأعمدته سليمة. (${err.message})`);
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+        });
+    }
+
+    function showError(message) {
+        statusText.innerText = message;
+        statusText.style.color = "red";
+        submitBtn.disabled = false;
+        progressBar.style.display = "none";
+    }
+</script>
+
+</body>
+</html>
