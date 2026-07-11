@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رفع الصور إلى Supabase</title>
+    <!-- استدعاء ستايل بسيط وأنيق لتصميم الواجهة -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            color: #1e88e5;
+            margin-bottom: 10px;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #e0e0e0;
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #1e88e5;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+            margin-top: 15px;
+        }
+        .btn:hover {
+            background-color: #1565c0;
+        }
+        .btn:disabled {
+            background-color: #b0bec5;
+            cursor: not-allowed;
+        }
+        #file-input {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            background-color: #eceff1;
+            color: #37474f;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px dashed #b0bec5;
+            width: 90%;
+            margin-bottom: 15px;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #546e7a;
+            font-weight: bold;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 15px;
+            display: none;
+        }
+        .progress-fill {
+            height: 8px;
+            width: 0%;
+            background-color: #4caf50;
+            transition: width 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>إختر صورة لنشرها</h2>
+    <hr>
+    
+    <!-- زر اختيار الصورة المخفي والمربوط بـ label -->
+    <label for="file-input" class="file-label" id="file-label-text">📂 اختر صورة من الجهاز</label>
+    <input type="file" id="file-input" accept="image/*">
+    
+    <!-- حالة الرفع -->
+    <div id="status">لم يتم اختيار صورة بعد</div>
+    
+    <!-- شريط تقدم التحميل -->
+    <div class="progress-bar" id="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    
+    <!-- زر الرفع -->
+    <button class="btn" id="upload-btn" disabled>رفع الصورة الآن</button>
+</div>
+
+<script>
+    // بيانات سوبابيس الخاصة بك
+    const SUPABASE_URL = "https://nxbhyybjmmecysbnrstm.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_4-YpKSS6qG7AxnQUFg998A_p52L5K4h";
+    const BUCKET_NAME = "avatars";
+
+    // جلب عناصر الواجهة
+    const fileInput = document.getElementById('file-input');
+    const fileLabelText = document.getElementById('file-label-text');
+    const statusText = document.getElementById('status');
+    const uploadBtn = document.getElementById('upload-btn');
+    const progressBar = document.getElementById('progress-bar');
+    const progressFill = document.getElementById('progress-fill');
+
+    let selectedFile = null;
+
+    // عند اختيار الملف
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            selectedFile = e.target.files[0];
+            fileLabelText.innerText = `🔄 تغيير الصورة`;
+            statusText.innerText = `جاهز للرفع: ${selectedFile.name}`;
+            statusText.style.color = "green";
+            uploadBtn.disabled = false;
+        } else {
+            selectedFile = null;
+            fileLabelText.innerText = `📂 اختر صورة من الجهاز`;
+            statusText.innerText = "تم إلغاء الاختيار.";
+            statusText.style.color = "red";
+            uploadBtn.disabled = true;
+        }
+    });
+
+    // عند الضغط على زر الرفع
+    uploadBtn.addEventListener('click', () => {
+        if (!selectedFile) return;
+
+        statusText.innerText = "جاري الرفع...";
+        statusText.style.color = "#1e88e5";
+        uploadBtn.disabled = true;
+        progressBar.style.display = "block";
+        progressFill.style.width = "0%";
+
+        // تجهيز اسم ملف آمن بدون فراغات وتجهيز الرابط
+        const safeFileName = selectedFile.name.replace(/\s+/g, '_');
+        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${BUCKET_NAME}/${safeFileName}`;
+
+        // استخدام XMLHttpRequest لمتابعة نسبة تقدم الرفع (Progress Bar)
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl, true); // استخدام PUT لرفع وتحديث الملفات مباشرة
+
+        // إضافة الهيدرز المطلوبة لـ Supabase
+        xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_KEY}`);
+        xhr.setRequestHeader("apiKey", SUPABASE_KEY);
+        xhr.setRequestHeader("Content-Type", selectedFile.type);
+
+        // تتبع تقدم الرفع
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percentage = (e.loaded / e.total) * 100;
+                progressFill.style.width = percentage + "%";
+            }
+        };
+
+        // عند اكتمال العملية أو حدوث استجابة من السيرفر
+        xhr.onload = function() {
+            if (xhr.status === 200 || xhr.status === 201) {
+                statusText.innerText = "تم رفع الصورة بنجاح! 🎉";
+                statusText.style.color = "#2e7d32";
+                progressBar.style.display = "none";
+            } else {
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    statusText.innerText = `فشل الرفع: ${errorResponse.message} (كود: ${xhr.status})`;
+                } catch(err) {
+                    statusText.innerText = `فشل الرفع! (كود الخطأ: ${xhr.status})`;
+                }
+                statusText.style.color = "red";
+                uploadBtn.disabled = false;
+            }
+        };
+
+        // عند حدوث خطأ في الاتصال بالشبكة
+        xhr.onerror = function() {
+            statusText.innerText = "حدث خطأ في الاتصال بالشبكة أثناء الرفع.";
+            statusText.style.color = "red";
+            uploadBtn.disabled = false;
+        };
+
+        // إرسال الملف الفعلي
+        xhr.send(selectedFile);
+    });
+</script>
+
+</body>
+</html>
