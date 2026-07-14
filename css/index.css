@@ -1,0 +1,109 @@
+/* CSS Styles for Modern Dashboard */
+
+@font-face {
+    font-family: 'arabic';
+    src: url('../ar.ttf');
+}
+
+/* لوحة ألوان ناعمة واحترافية */
+:root {
+    --primary: #5AB9A8;        /* أخضر مزرق (Teal) */
+    --background: #F8FAFA;     /* خلفية فاتحة جداً */
+    --text-main: #2D4059;      /* أزرق داكن للنصوص */
+    --text-muted: #7A8B99;     /* رمادي مزرق للنصوص الثانوية */
+    --card-bg: #eefaf8;       /* خلفية Teal فاتحة جداً للكارت */
+    --shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "arabic", sans-serif;
+    background-color: var(--background);
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
+.bar {
+    text-align: center;
+    margin-bottom: 50px;
+    max-width: 500px;
+}
+
+.bar h2 {
+    color: var(--primary);
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+.bar p {
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+/* توزيع الشبكة */
+.gridlayout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 450px;
+}
+
+/* تنسيق البطاقة (الكارد) */
+.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--card-bg); /* خلفية Teal فاتحة */
+    border-radius: 50px;       /* شكل بيضاوي */
+    padding: 20px;
+    text-decoration: none;
+    color: var(--text-main);
+    transition: background 0.3s ease; /* فقط تغيير اللون بسلاسة */
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(90, 185, 168, 0.2);
+}
+
+/* تأثير عند المرور بالفأرة (ثابت بدون حركة) */
+.card:hover {
+    background: var(--primary); /* اللون الأساسي عند التفاعل */
+    transform: none;           /* إلغاء أي حركة */
+    box-shadow: var(--shadow); 
+}
+
+.card i {
+    font-size: 32px;
+    color: var(--primary);
+    margin-bottom: 12px;
+    transition: color 0.3s;
+}
+
+.card p {
+    font-weight: 600;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+/* تغيير لون النص والأيقونة عند التفاعل */
+.card:hover i, 
+.card:hover p {
+    color: #ffffff; 
+}
+
+/* تعديلات للشاشات الصغيرة جداً */
+@media (max-width: 350px) {
+    .gridlayout {
+        grid-template-columns: 1fr;
+    }
+}
